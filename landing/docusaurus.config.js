@@ -29,7 +29,20 @@ module.exports = {
         // { to: "/blog", label: "Hubungi Kami", position: "left" },
         { to: "/visimisi", label: "Visi & Misi", position: "left" },
         { to: "/gambaranumum", label: "Gambaran Umum", position: "left" },
-
+        {
+          href: "/admin",
+          target: "_blank",
+          label: "Berita",
+          position: "left",
+        },
+        {
+          href: "/admin",
+          target: "_blank",
+          label: "Pengaduan",
+          position: "left",
+        },
+        
+        
         {
           href: "/admin",
           target: "_blank",
