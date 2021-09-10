@@ -1,3 +1,5 @@
 dist
 puskesmas
 .env
+env.json
+github.com*

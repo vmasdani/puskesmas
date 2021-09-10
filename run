@@ -1,0 +1,72 @@
+#!/bin/python3
+
+import subprocess
+import string
+import json
+import pprint
+import argparse
+
+parser = argparse.ArgumentParser(description='Puskesmas Runner.')
+
+parser.add_argument('type',
+                    help='an integer for the accumulator')
+
+args = parser.parse_args()
+run_type = args.type
+
+frontend_env_template = open('./frontend.env.template').read()
+env_json_str = open('./env.json').read()
+
+env_json = json.loads(env_json_str)
+
+print(pprint.pprint(env_json))
+
+base_url = ''
+public_url = ''
+
+if run_type == 'dev':
+    base_url = env_json['base_url_dev']
+    public_url = env_json['public_url_dev']
+
+elif run_type == 'prod':
+    base_url = env_json['base_url_prod']
+    public_url = env_json['public_url_prod']
+
+env_result = string.Template(frontend_env_template).substitute(
+    base_url=base_url,
+    public_url=public_url,
+    admin_url=base_url+'/admin'
+)
+
+print(env_result)
+
+# Push admin env
+open('./admin/.env', 'w+').write(env_result)
+
+tasks = []
+
+if run_type == 'dev':
+    tasks = [
+        ('go build', '.'),
+        ('./puskesmas', '.'),
+    ]
+
+elif run_type == 'prod':
+    tasks = [
+        ('rm -rf dist', '.'),
+        ('mkdir -p dist/admin && mkdir -p dist/landing && mkdir -p dist/assets && mkdir -p dist/news', '.'),
+        ('npm run build', 'landing'),
+        ('cp -r landing/build/* ./dist/landing', '.'),
+        ('npm run build', 'admin'),
+        ('cp -r admin/build/* ./dist/admin', '.'),
+        ('xgo --targets=linux/amd64 .', '.'),
+        ('sudo chmod -R 777 github.com', '.'),
+        ('mv github.com/vmasdani/puskesmas-linux-amd64 dist', '.'),
+    ]
+
+for task in tasks:
+    (cmd, path) = task
+
+    print('[COMMAND]', cmd, '|', path)
+
+    subprocess.run(cmd, shell=True, cwd=path,)

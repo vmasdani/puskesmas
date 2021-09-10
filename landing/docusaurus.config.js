@@ -7,7 +7,7 @@ module.exports = {
   tagline: "Kecamatan Tigaraksa, Tangerang",
   url: "https://your-docusaurus-test-site.com",
   baseUrl: "/",
-  onBrokenLinks: "throw",
+  // onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   favicon: "img/favicon.ico",
   organizationName: "facebook", // Usually your GitHub org/user name.
@@ -20,18 +20,23 @@ module.exports = {
         src: "img/logo.svg",
       },
       items: [
+        // {
+        //   type: "doc",
+        //   docId: "intro",
+        //   position: "left",
+        //   label: "Tentang",
+        // },
+        // { to: "/blog", label: "Hubungi Kami", position: "left" },
+        { to: "/visimisi", label: "Visi & Misi", position: "left" },
+        { to: "/gambaranumum", label: "Gambaran Umum", position: "left" },
+
         {
-          type: "doc",
-          docId: "intro",
-          position: "left",
-          label: "Tentang",
-        },
-        { to: "/blog", label: "Hubungi Kami", position: "left" },
-        {
-          href: "https://github.com/facebook/docusaurus",
+          href: "/admin",
+          target: "_blank",
           label: "Admin",
           position: "right",
         },
+
         // {
         //   href: "https://github.com/facebook/docusaurus",
         //   label: "GitHub",
@@ -43,11 +48,17 @@ module.exports = {
       style: "dark",
       links: [
         {
-          title: "Docs",
+          title: "Kontak",
           items: [
             {
-              label: "Tutorial",
-              to: "/docs/intro",
+              label: "WhatsApp +62 827-1829-3829",
+              to: "#",
+              target: "_blank",
+            },
+            {
+              label: "Telp (021) 5001929320",
+              to: "#",
+              target: "_blank",
             },
           ],
         },
@@ -55,34 +66,36 @@ module.exports = {
           title: "Community",
           items: [
             {
-              label: "Stack Overflow",
+              label: "Facebook",
               href: "https://stackoverflow.com/questions/tagged/docusaurus",
             },
             {
-              label: "Discord",
+              label: "Instagram",
               href: "https://discordapp.com/invite/docusaurus",
             },
-            {
-              label: "Twitter",
-              href: "https://twitter.com/docusaurus",
-            },
+            // {
+            //   label: "Twitter",
+            //   href: "https://twitter.com/docusaurus",
+            // },
           ],
         },
         {
-          title: "More",
+          title: "Alamat",
           items: [
             {
-              label: "Blog",
-              to: "/blog",
+              label:
+                "Jl. Aria Jaya Santika No.Ds, Pasir Nangka, Tigaraksa Kec., Tangerang, Banten 15720",
+              href: "#",
+              // target: "_blank",
             },
-            {
-              label: "GitHub",
-              href: "https://github.com/facebook/docusaurus",
-            },
+            // {
+            //   label: "GitHub",
+            //   href: "https://github.com/facebook/docusaurus",
+            // },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Puskesmas Pasir Nangka. Built with Docusaurus.`,
     },
     prism: {
       theme: lightCodeTheme,

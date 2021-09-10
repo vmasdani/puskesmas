@@ -20,7 +20,13 @@ function HomepageHeader() {
             to="/docs/intro">
             Google Maps 📍
           </Link> */}
-          <a target="_blank" href="https://goo.gl/maps/TvHWhvgrHLAi4vEQ8" className="button button--secondary button--lg">Google Maps 📍</a>
+          <a
+            target="_blank"
+            href="https://goo.gl/maps/TvHWhvgrHLAi4vEQ8"
+            className="button button--secondary button--lg"
+          >
+            Google Maps 📍
+          </a>
         </div>
       </div>
     </header>
@@ -36,7 +42,20 @@ export default function Home() {
     >
       <HomepageHeader />
       <main>
-        <HomepageFeatures />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            marginTop: "2em",
+            marginBottom: "2em",
+          }}
+        >
+          <img src="/img/01-image.jpeg" style={{ width: "20vw" }} />
+          <img src="/img/02-image.jpeg" style={{ width: "20vw" }} />
+          <img src="/img/03-image.jpeg" style={{ width: "20vw" }} />
+          <img src="/img/04-image.jpeg" style={{ width: "20vw" }} />
+        </div>
+        {/* <HomepageFeatures /> */}
       </main>
     </Layout>
   );
