@@ -1,6 +1,12 @@
 # Sidumas
 
+Halo, selamat datang di SIDUMAS (Sistim Pengaduan Masyarakat)!  
 
+Dalam rangka  meningkatkan mutu pelayanan, Puskesmas Pasir Nangka membuka pengaduan pelayanan kesehatan  bagi masyarakat melalui website Puskesmas Pasir Nangka.  
+
+Pengaduan secara langsung diterima oleh petugas dan apabila dapat diselesaikan langsung dan dilaporkan kepada Unit Pengaduan Masyarakat Puskesmas Pasir Nangka.
+
+Kami menjamin kerahasiaan nomor telepon dan alamat anda. Nomor telepon dan alamat anda hanya diteruskan ke admin, tapi tidak dimunculkan di website.
 
 import { useState, useEffect } from 'react'
 
