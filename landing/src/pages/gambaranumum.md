@@ -1,5 +1,18 @@
 # Gambaran Umum
 
+### Visi Misi
+
+#### Visi
+
+Menjadikan Puskesmas sebagai Pusat Pelayanan Kesehatan unggulan yang berkualitas, profesional dan terjangkau
+
+#### Misi
+
+- Memberikan pelayanan kesehatan yang berkualitas, merata dan terjangkau bagi seluruh lapisan masyarakat.
+- Meningkatkan kualitas sumber daya manusia (SDM) yang profesional.
+- Memelihara dan meningkatkan sarana dan prasarana pelayanan kesehatan.
+- Memberdayakan masyarakat dalam bidang kesehatan dengan menjalin kerja sama lintas sektoral.
+
 ### Letak Geografis [(Google Maps)](https://goo.gl/maps/TvHWhvgrHLAi4vEQ8)
 
 - Wilayah kerja Puskesmas Pasir Nangka Kecamatan Tigaraksa meliputi Desa Pasir Nangka, Desa Pasir Baolang, Desa Pete, Desa Pematang, Desa Tegalsari, Desa Matagara dan Desa Cisereh dengan luas wilayah kerja 48,74 Km².

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -40,9 +42,9 @@ func CheckEnv() {
 
 type GormModel struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt time.Time  `json:"updatedAt"`
+	DeletedAt *time.Time `json:"deletedAt"`
 }
 
 type User struct {
@@ -66,15 +68,26 @@ type Role struct {
 }
 
 type Article struct {
+	GormModel
 	Date    time.Time `json:"date"`
 	Title   string    `json:"title"`
 	Content string    `json:"content"`
 }
 
 type AdminConfig struct {
+	GormModel
 	FacebookUrl    string `json:"facebookURL"`
 	InstagramUrl   string `json:"instagramURL"`
 	WhatsappNumber string `json:"whatsappNumber"`
+}
+
+type Complaint struct {
+	GormModel
+	Name      string `json:"name"`
+	Phone     string `json:"phone"`
+	Address   string `json:"address"`
+	Answer    string `json:"answer"`
+	Complaint string `json:"complaint"`
 }
 
 func main() {
@@ -101,6 +114,7 @@ func main() {
 			Role{},
 			Article{},
 			AdminConfig{},
+			Complaint{},
 		}
 
 	for _, table := range tables {
@@ -116,6 +130,29 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/complaints", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			w.Header().Set("content-type", "application/json")
+			fmt.Println("GET")
+
+			var complaints []Complaint
+			db.Find(&complaints)
+
+			json.NewEncoder(w).Encode(&complaints)
+		case http.MethodPost:
+			var complaint Complaint
+			json.NewDecoder(r.Body).Decode(&complaint)
+
+			db.Save(&complaint)
+
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(&complaint)
+		default:
+			fmt.Println("[complaints] method irrelevant")
+		}
+	}).Methods("GET", "POST")
+
 	r.PathPrefix("/admin").Handler(http.StripPrefix("/admin", http.FileServer(http.Dir("./admin"))))
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./landing/")))
 
@@ -124,5 +161,13 @@ func main() {
 	fmt.Println("Running on ", "http://localhost:"+serverPort)
 
 	// Bind to a port and pass our router in
-	log.Fatal(http.ListenAndServe(":"+serverPort, r))
+	log.Fatal(http.ListenAndServe(":"+serverPort, cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedHeaders: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+
+		AllowCredentials: true,
+		// Enable Debugging for testing, consider disabling in production
+		Debug: true,
+	}).Handler(r)))
 }

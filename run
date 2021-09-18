@@ -15,6 +15,7 @@ args = parser.parse_args()
 run_type = args.type
 
 frontend_env_template = open('./frontend.env.template').read()
+landing_env_template = open('./landing.env.template').read()
 env_json_str = open('./env.json').read()
 
 env_json = json.loads(env_json_str)
@@ -23,14 +24,19 @@ print(pprint.pprint(env_json))
 
 base_url = ''
 public_url = ''
+backend_url = ''
 
 if run_type == 'dev':
     base_url = env_json['base_url_dev']
     public_url = env_json['public_url_dev']
+    backend_url = env_json['backend_url_dev']
+    
 
 elif run_type == 'prod':
     base_url = env_json['base_url_prod']
     public_url = env_json['public_url_prod']
+    backend_url = env_json['backend_url_prod']
+    
 
 env_result = string.Template(frontend_env_template).substitute(
     base_url=base_url,
@@ -38,10 +44,18 @@ env_result = string.Template(frontend_env_template).substitute(
     admin_url=base_url+'/admin'
 )
 
+landing_env_result = string.Template(landing_env_template).substitute(
+    base_url=backend_url,
+)
+
 print(env_result)
+print(landing_env_result)
 
 # Push admin env
 open('./admin/.env', 'w+').write(env_result)
+
+# Push sidumas env
+open('./landing/.env', 'w+').write(landing_env_result)
 
 tasks = []
 

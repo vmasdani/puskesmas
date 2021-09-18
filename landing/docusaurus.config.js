@@ -3,13 +3,21 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 
 /** @type {import('@docusaurus/types').DocusaurusConfig} */
 module.exports = {
+  plugins: [
+    [
+      "docusaurus2-dotenv",
+      {
+        systemvars: true,
+      },
+    ],
+  ],
   title: "Puskesmas Pasir Nangka",
   tagline: "Kecamatan Tigaraksa, Tangerang",
   url: "https://your-docusaurus-test-site.com",
   baseUrl: "/",
   // onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
-  favicon: "img/favicon.ico",
+  favicon: "img/puskesmas.png",
   organizationName: "facebook", // Usually your GitHub org/user name.
   projectName: "docusaurus", // Usually your repo name.
   themeConfig: {
@@ -17,7 +25,7 @@ module.exports = {
       title: "Puskesmas Pasir Nangka",
       logo: {
         alt: "My Site Logo",
-        src: "img/logo.svg",
+        src: "img/puskesmas.png",
       },
       items: [
         // {
@@ -27,22 +35,24 @@ module.exports = {
         //   label: "Tentang",
         // },
         // { to: "/blog", label: "Hubungi Kami", position: "left" },
-        { to: "/visimisi", label: "Visi & Misi", position: "left" },
+        // { to: "/visimisi", label: "Visi & Misi", position: "left" },
         { to: "/gambaranumum", label: "Gambaran Umum", position: "left" },
+        { to: "/pelayanan", label: "Pelayanan", position: "left" },
+
+        
+        {
+          href: "/sidumas",
+          // target: "_blank",
+          label: "SIDUMAS",
+          position: "left",
+        },
         {
           href: "/admin",
           target: "_blank",
           label: "Berita",
           position: "left",
         },
-        {
-          href: "/admin",
-          target: "_blank",
-          label: "Pengaduan",
-          position: "left",
-        },
-        
-        
+
         {
           href: "/admin",
           target: "_blank",
