@@ -55,7 +55,6 @@ module.exports = {
 
         {
           href: "/admin",
-          target: "_blank",
           label: "Admin",
           position: "right",
         },

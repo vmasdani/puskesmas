@@ -7,6 +7,8 @@ DB_HOST=dbhost
 DB_USERNAME=dbusername
 DB_PASSWORD=dbpassword
 DB_NAME=dbhost
+ADMIN_USERNAME=
+ADMIN_PASSWORD=
 ```
 
 2. Install all dependencies on `admin`, `dist`, and `landing`

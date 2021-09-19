@@ -17,11 +17,30 @@ export const Sidumas = () => {
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [complaint, setComplaint] = useState('')
+  const [complaintToEdit, setComplaintToEdit] = useState(null)
+  const [authorized, setAuthorized] = useState(false)
   
   useEffect(() => {
     setBaseUrl(process.env.REACT_APP_BASE_URL)
     fetchComplaints()
+    fetchAuthorizationStatus()
   }, [])
+  const fetchAuthorizationStatus = async () => {
+    try {
+      console.log('apikey:', localStorage.getItem('apiKey'))
+      if (localStorage.getItem('apiKey')) {
+        const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/authorize-admin`, {
+          headers: {
+            authorization: localStorage.getItem('apiKey')
+          }
+        })
+        if (resp.status !== 200) throw await resp.text()
+        setAuthorized(true)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
   const fetchComplaints = async () => {
     try {
       const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/complaints`)
@@ -56,6 +75,22 @@ export const Sidumas = () => {
         console.error(e)
         alert('Pengiriman gagal! Harap coba kembali beberapa saat')
       }
+    }
+  }
+  const handleSubmitForm = async (e) => {
+    try {
+      const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/complaints-save`, {
+        method: 'post',
+        headers: {
+          authorization: localStorage.getItem('apiKey'),
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(complaintToEdit)
+      })
+      if (resp.status !== 201) throw await resp.text()
+      window.location.reload()
+    } catch (e) {
+      console.error(e)
     }
   }
   return (
@@ -135,11 +170,26 @@ export const Sidumas = () => {
             <div>
               {complaints.reverse().map((complaint, i) => {
                 return (
-                  <div>
-                    <div>
+                  <div style={{ }}>
+                    <div 
+                      style={{
+                        display:"flex",
+                        width: "100%",
+                        justifyContent: "space-between",
+                        color: complaint?.answer === "" ? 'crimson' : 'green'
+                      }}
+                    >
                       <strong>
                         {(complaints?.length ?? 0) - i}) Pengirim: {complaint?.name}
                       </strong>
+                      {authorized 
+                        ? <button 
+                            onClick={() => setComplaintToEdit(complaint)}
+                          >
+                            Edit
+                          </button>
+                        :<></>
+                      }
                     </div>
                     <div>Pengaduan:</div>
                     <div>
@@ -152,8 +202,9 @@ export const Sidumas = () => {
                     <div>Jawaban:</div>
                     <div>
                       <textarea 
-                        readOnly  
-                        style={{ width: "100%", resize: "vertical", height: "7.5vh" }} 
+                        readOnly
+                        value={complaint?.answer}
+                        style={{ width: "100%", resize: "vertical", height: "10vh" }} 
                       />
                     </div>
                     <div>
@@ -173,6 +224,45 @@ export const Sidumas = () => {
           </div>
         </div>
       </div>
+      {complaintToEdit
+          ? <form onSubmit={handleSubmitForm}>
+              <div style={{marginTop: 15}}>
+                <div style={{ display:"flex", width: "100%"}}>
+                  Nama:<input value={complaintToEdit?.name} style={{width:"100%", marginLeft: 5}} />
+                </div>
+                <div style={{ display:"flex", width: "100%"}}>
+                  Telp:<input value={complaintToEdit?.phone} style={{width:"100%", marginLeft: 5}} />
+                </div>
+                <div style={{ display:"flex", width: "100%"}}>
+                  Alamat:<input value={complaintToEdit?.address} style={{width:"100%", marginLeft: 5}} />
+                </div>
+                <div style={{ display:"flex", width: "100%"}}>
+                  Aduan:<textarea value={complaintToEdit?.complaint} style={{width:"100%", marginLeft: 5, resize: "vertical", height:"10vh"}} />
+                </div>
+                <div style={{ display:"flex", width: "100%"}}>
+                  Jawaban:
+                    <textarea
+                      onChange={e => {
+                        setComplaintToEdit({
+                          ...complaintToEdit,
+                          answer: e.target.value
+                        })
+                      }} 
+                      value={complaintToEdit?.answer} 
+                      style={{
+                        width:"100%", 
+                        marginLeft: 5, 
+                        resize: "vertical", 
+                        height:"10vh"
+                      }} 
+                    />
+                </div>
+                <input type="submit" value="save" />
+              </div>
+            </form>
+            
+          : <></>
+        }
     </div>
   )
 }

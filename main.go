@@ -4,16 +4,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+func generateJwtSecret() string {
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	b := make([]rune, 32)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
 
 func CheckEnv() {
 	err := godotenv.Load()
@@ -26,17 +38,35 @@ func CheckEnv() {
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 	serverPort := os.Getenv("SERVER_PORT")
+	jwtSecret := os.Getenv("JWT_SECRET")
+	adminUsername := os.Getenv("ADMIN_USERNAME")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
 
 	if serverPort == "" {
 		serverPort = "8000"
 	}
 
+	if jwtSecret == "" {
+		jwtSecret = generateJwtSecret()
+	}
+
+	if adminUsername == "" {
+		panic("Admin username cannot be empty!")
+	}
+
+	if adminPassword == "" {
+		panic("Admin password cannot be empty!")
+	}
+
 	godotenv.Write(map[string]string{
-		"DB_HOST":     dbHost,
-		"DB_USERNAME": dbUsername,
-		"DB_PASSWORD": dbPassword,
-		"DB_NAME":     dbName,
-		"SERVER_PORT": serverPort,
+		"DB_HOST":        dbHost,
+		"DB_USERNAME":    dbUsername,
+		"DB_PASSWORD":    dbPassword,
+		"DB_NAME":        dbName,
+		"SERVER_PORT":    serverPort,
+		"JWT_SECRET":     jwtSecret,
+		"ADMIN_USERNAME": adminUsername,
+		"ADMIN_PASSWORD": adminPassword,
 	}, "./.env")
 }
 
@@ -130,6 +160,8 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.Use(AuthMiddleware)
+
 	r.HandleFunc("/complaints", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -153,7 +185,132 @@ func main() {
 		}
 	}).Methods("GET", "POST")
 
+	CheckAdmin := func(auth string) bool {
+		fmt.Println("Auth token:", auth)
+
+		token, err := jwt.ParseWithClaims(auth, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil {
+			return false
+		}
+
+		// Cast
+		admin, ok := token.Claims.(jwt.MapClaims)["admin"].(bool)
+
+		if !ok {
+			return false
+		}
+
+		fmt.Println("Is admin:", admin)
+		fmt.Println(token.Claims)
+
+		return admin
+	}
+
 	r.PathPrefix("/admin").Handler(http.StripPrefix("/admin", http.FileServer(http.Dir("./admin"))))
+	r.HandleFunc("/authorize-admin", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+
+		admin := CheckAdmin(auth)
+
+		if !admin {
+			fmt.Println(err)
+			fmt.Fprintf(w, "Error decoding token. Not admin")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	})
+	r.HandleFunc("/complaints-save", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+
+		admin := CheckAdmin(auth)
+
+		if !admin {
+			fmt.Println(err)
+			fmt.Fprintf(w, "Error decoding token. Not admin")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		var complaint Complaint
+		json.NewDecoder(r.Body).Decode(&complaint)
+
+		db.Save(&complaint)
+
+		json.NewEncoder(w).Encode(complaint)
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	r.HandleFunc("/authorize", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+		fmt.Println("Auth token:", auth)
+
+		token, err := jwt.ParseWithClaims(auth, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		fmt.Println(token.Claims)
+
+		if err != nil {
+			fmt.Println(err)
+			fmt.Fprintf(w, "Error decoding token")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+	})
+	r.HandleFunc("/complaints-save", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+		fmt.Println("Auth token:", auth)
+
+		token, err := jwt.ParseWithClaims(auth, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil {
+			fmt.Println(err)
+			fmt.Fprintf(w, "Error decoding token")
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+
+		fmt.Println(token.Claims)
+	})
+
+	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		type LoginStruct struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+		}
+
+		var loginData LoginStruct
+		json.NewDecoder(r.Body).Decode(&loginData)
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"exp":   time.Now().Unix() + 86400*365*30,
+			"admin": true,
+		})
+
+		// Sign and get the complete encoded token as a string using the secret
+		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+		fmt.Println(tokenString, err)
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if loginData.Username != os.Getenv("ADMIN_USERNAME") || loginData.Password != os.Getenv("ADMIN_PASSWORD") {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Username atau password salah!")
+			return
+		}
+
+		fmt.Fprintf(w, "%s", tokenString)
+	}).Methods("POST")
+
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./landing/")))
 
 	serverPort := os.Getenv("SERVER_PORT")
