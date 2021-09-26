@@ -46,12 +46,12 @@ module.exports = {
           label: "SIDUMAS",
           position: "left",
         },
-        {
-          href: "/admin",
-          target: "_blank",
-          label: "Berita",
-          position: "left",
-        },
+        // {
+        //   href: "/admin",
+        //   target: "_blank",
+        //   label: "Berita",
+        //   position: "left",
+        // },
 
         {
           href: "/admin",

@@ -7,8 +7,12 @@ export const AdminPage = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [manpowerCategories, setManpowerCategories] = useState([])
+  const [manpowerCategoryDeleteIds, setManpowerCategoryDeleteIds] = useState([])
   const [manpowerStatuses, setManpowerStatuses] = useState([])
+  const [manpowerStatusDeleteIds, setManpowerStatusDeleteIds] = useState([])
   const [manpowerStatusAmounts, setManpowerStatusAmounts] = useState([])
+  const [manpowerStatusAmountDeleteIds, setManpowerStatusAmountDeleteIds] = useState([])
+  const [loading, setLoading] = useState(false)
   let nanoid=(t=21)=>{let e="",r=crypto.getRandomValues(new Uint8Array(t));for(;t--;){let n=63&r[t];e+=n<36?n.toString(36):n<62?(n-26).toString(36).toUpperCase():n<63?"_":"-"}return e};
   useEffect(() => {
     console.log(process.env.REACT_APP_BASE_URL)
@@ -120,6 +124,7 @@ export const AdminPage = () => {
   
   const handleSave = async ()  => {
     try {
+      setLoading(true)
       const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowers-save`, {
         method: 'post',
         headers: {
@@ -128,12 +133,16 @@ export const AdminPage = () => {
         },
         body: JSON.stringify({
           manpowerCategories: manpowerCategories,
+          manpowerCategoryDeleteIds: manpowerCategoryDeleteIds,
           manpowerStatuses: manpowerStatuses,
-          manpowerStatusAmounts: manpowerStatusAmounts
+          manpowerStatusDeleteIds: manpowerStatusDeleteIds,
+          manpowerStatusAmounts: manpowerStatusAmounts,
+          manpowerStatusAmountDeleteIds: manpowerStatusAmountDeleteIds,
         })
       })
       window.location.reload()
     } catch (e) {
+      setLoading(false)
       console.error(e)
     }
   }
@@ -158,12 +167,17 @@ export const AdminPage = () => {
       }
       {authorized
         ? <div style={{ marginTop: 15 }}>
-            <h3>Settings <button onClick={handleSave}>Save</button></h3>
+            <h3>
+              Settings 
+              {loading
+                ? <></>
+                : <button onClick={handleSave}>Save</button>
+              }
+            </h3>
             <hr />
             <h6>Manpower</h6>
             <div style={{ overflow: "auto", resize: "vertical", height: "40vh" }}>
               <table border="1" style={{ width: "100%", borderCollapse: "separate" }}>
-                <thead>
                   <tr style={{ position: "sticky", top: 0, zIndex: 1 }}>
                     <th style={{ position: "sticky", top: 0, zIndex: 1 }} rowSpan={2}>#</th>
                     <th style={{ position: "sticky", top: 0 }} rowSpan={2}>Category 
@@ -189,7 +203,7 @@ export const AdminPage = () => {
                             <td style={{ position: "sticky", top: 0 }}>
                               <input
                                 style={{ width: 75 }}
-                                value={manpowerStatus?.name ?? ''} 
+                                value={manpowerStatus?.name ?? ''}
                                 onChange={e => {
                                   setManpowerStatuses(
                                     manpowerStatuses.map(manpowerStatusX => manpowerStatus?.uuid === manpowerStatusX?.uuid
@@ -199,6 +213,13 @@ export const AdminPage = () => {
                                   )
                                 }}
                               />
+                              <button onClick={() => {
+                                setManpowerStatusDeleteIds([
+                                  ...manpowerStatusDeleteIds,
+                                  manpowerStatus?.id ?? 0
+                                ])
+                                setManpowerStatuses(manpowerStatuses.filter((_, ix) => ix !== i))
+                              }}>Delete</button>
                             </td>
                           )
                         })
@@ -222,6 +243,13 @@ export const AdminPage = () => {
                               )
                             }}
                           />
+                          <button onClick={() => {
+                            setManpowerCategoryDeleteIds([
+                              ...manpowerCategoryDeleteIds,
+                              manpowerCategory?.id ?? 0
+                            ])
+                            setManpowerCategories(manpowerCategories.filter((_, ix) => ix !== i))
+                          }}>Delete</button>
                         </td>
                         {manpowerStatuses.map((manpowerStatus, i) => {
                           const foundManpowerStatusAmount = manpowerStatusAmounts?.find(manpowerStatusAmount =>
@@ -287,7 +315,6 @@ export const AdminPage = () => {
                       </tr>
                     )
                   })}
-                </thead>
               </table>
             </div>
           </div>

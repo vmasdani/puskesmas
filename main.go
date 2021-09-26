@@ -234,7 +234,7 @@ func main() {
 		return admin
 	}
 
-	r.PathPrefix("/admin").Handler(http.StripPrefix("/admin", http.FileServer(http.Dir("./admin"))))
+	// r.PathPrefix("/admin").Handler(http.StripPrefix("/admin", http.FileServer(http.Dir("./admin"))))
 	r.HandleFunc("/authorize-admin", func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("authorization")
 
@@ -304,9 +304,14 @@ func main() {
 	})
 
 	type ManpowerData struct {
-		ManpowerCategories    []ManpowerCategory     `json:"manpowerCategories"`
-		ManpowerStatuses      []ManpowerStatus       `json:"manpowerStatuses"`
-		ManpowerStatusAmounts []ManpowerStatusAmount `json:"manpowerStatusAmounts"`
+		ManpowerCategories        []ManpowerCategory `json:"manpowerCategories"`
+		ManpowerCategoryDeleteIds []uint             `json:"manpowerCategoryDeleteIds"`
+
+		ManpowerStatuses        []ManpowerStatus `json:"manpowerStatuses"`
+		ManpowerStatusDeleteIds []uint           `json:"manpowerStatusDeleteIds"`
+
+		ManpowerStatusAmounts         []ManpowerStatusAmount `json:"manpowerStatusAmounts"`
+		ManpowerStatusAmountDeleteIds []uint                 `json:"manpowerStatusAmountDeleteIds"`
 	}
 
 	r.HandleFunc("/manpowers-save", func(w http.ResponseWriter, r *http.Request) {
@@ -331,12 +336,24 @@ func main() {
 			db.Save(&manpowerCategory)
 		}
 
+		for _, id := range manpowerData.ManpowerCategoryDeleteIds {
+			db.Delete(&ManpowerCategory{}, id)
+		}
+
 		for _, manpowerStatus := range manpowerData.ManpowerStatuses {
 			db.Save(&manpowerStatus)
 		}
 
+		for _, id := range manpowerData.ManpowerStatusDeleteIds {
+			db.Delete(&ManpowerStatus{}, id)
+		}
+
 		for _, manpowerStatusAmount := range manpowerData.ManpowerStatusAmounts {
 			db.Save(&manpowerStatusAmount)
+		}
+
+		for _, id := range manpowerData.ManpowerStatusAmountDeleteIds {
+			db.Delete(&ManpowerStatusAmount{}, id)
 		}
 
 		w.WriteHeader(http.StatusCreated)
