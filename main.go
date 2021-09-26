@@ -72,6 +72,7 @@ func CheckEnv() {
 
 type GormModel struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
+	UUID      string     `gorm:"primary_key" json:"uuid"`
 	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
 	DeletedAt *time.Time `json:"deletedAt"`
@@ -120,6 +121,27 @@ type Complaint struct {
 	Complaint string `json:"complaint"`
 }
 
+type ManpowerCategory struct {
+	GormModel
+	Name string `json:"name"`
+}
+
+type ManpowerStatus struct {
+	GormModel
+	Name string `json:"name"`
+}
+
+type ManpowerStatusAmount struct {
+	GormModel
+	Value                int              `json:"value"`
+	ManpowerCategoryID   *uint            `json:"manpowerCategoryId"`
+	ManpowerCategoryUuid string           `json:"manpowerCategoryUuid"`
+	ManpowerCategory     ManpowerCategory `json:"manpowerCategory"`
+	ManpowerStatusID     *uint            `json:"manpowerStatusId"`
+	ManpowerStatusUuid   string           `json:"manpowerStatusUuid"`
+	ManpowerStatus       ManpowerStatus   `json:"manpowerStatus"`
+}
+
 func main() {
 	CheckEnv()
 
@@ -145,6 +167,9 @@ func main() {
 			Article{},
 			AdminConfig{},
 			Complaint{},
+			ManpowerCategory{},
+			ManpowerStatus{},
+			ManpowerStatusAmount{},
 		}
 
 	for _, table := range tables {
@@ -277,6 +302,92 @@ func main() {
 
 		fmt.Println(token.Claims)
 	})
+
+	type ManpowerData struct {
+		ManpowerCategories    []ManpowerCategory     `json:"manpowerCategories"`
+		ManpowerStatuses      []ManpowerStatus       `json:"manpowerStatuses"`
+		ManpowerStatusAmounts []ManpowerStatusAmount `json:"manpowerStatusAmounts"`
+	}
+
+	r.HandleFunc("/manpowers-save", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+		fmt.Println("Auth token:", auth)
+
+		admin := CheckAdmin(auth)
+
+		if !admin {
+			fmt.Println(err)
+			fmt.Fprintf(w, "Error decoding token. Not admin")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		w.Header().Set("content-type", "application/json")
+
+		var manpowerData ManpowerData
+		json.NewDecoder(r.Body).Decode(&manpowerData)
+
+		for _, manpowerCategory := range manpowerData.ManpowerCategories {
+			db.Save(&manpowerCategory)
+		}
+
+		for _, manpowerStatus := range manpowerData.ManpowerStatuses {
+			db.Save(&manpowerStatus)
+		}
+
+		for _, manpowerStatusAmount := range manpowerData.ManpowerStatusAmounts {
+			db.Save(&manpowerStatusAmount)
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(manpowerData)
+
+	}).Methods("POST")
+	r.HandleFunc("/manpowercategories", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("content-type", "application/json")
+
+		switch r.Method {
+		case "GET":
+			var manpowerCategories []ManpowerCategory
+			db.Find(&manpowerCategories)
+			json.NewEncoder(w).Encode(manpowerCategories)
+
+		case "POST":
+			auth := r.Header.Get("authorization")
+			fmt.Println("Auth token:", auth)
+
+			admin := CheckAdmin(auth)
+
+			if !admin {
+				fmt.Println(err)
+				fmt.Fprintf(w, "Error decoding token. Not admin")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			fmt.Println("POST detect")
+			var manpowerCategory []ManpowerCategory
+			db.Save(&manpowerCategory)
+			json.NewEncoder(w).Encode(&manpowerCategory)
+		}
+	}).Methods("GET", "POST")
+	r.HandleFunc("/manpowerstatuses", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("content-type", "application/json")
+
+		var manpowerStatuses []ManpowerStatus
+		db.Find(&manpowerStatuses)
+		json.NewEncoder(w).Encode(manpowerStatuses)
+	}).Methods("GET")
+	r.HandleFunc("/manpowerstatusamounts", func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("content-type", "application/json")
+
+		var manpowerStatusAmounts []ManpowerStatusAmount
+		db.Find(&manpowerStatusAmounts)
+		json.NewEncoder(w).Encode(manpowerStatusAmounts)
+	}).Methods("GET")
 
 	r.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		type LoginStruct struct {

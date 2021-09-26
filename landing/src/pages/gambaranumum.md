@@ -42,4 +42,142 @@ Dari data BPS Kecamatan Tigaraksa, Pasir Nangka menunjukan struktur penduduk usi
 
 Jumlah dan Jenis tenaga di Puskesmas Pasir Nangka
 
-![sdm](/img/05-sdm.png)
+import { useState, useEffect } from 'react';
+
+export const Manpower = () => {
+    const [manpowerCategories, setManpowerCategories] = useState([])
+    const [manpowerStatuses, setManpowerStatuses] = useState([])
+    const [manpowerStatusAmounts, setManpowerStatusAmounts] = useState([])
+    useEffect(() => {
+        fetchData()
+    }, [])
+    const fetchData = async () => {
+        await Promise.all([
+            fetchManpowerCategories(),
+            fetchManpowerStatuses(),
+            fetchManpowerStatusAmounts(),
+        ])
+    }
+    const fetchManpowerCategories = async () => {
+        try {
+            const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowercategories`)
+            if (resp.status === 200) {
+                setManpowerCategories(await resp.json())
+            } else {
+                console.error('Status error')
+            }
+        } catch (e) {
+        console.error(e)
+        } 
+    }
+    const fetchManpowerStatuses = async () => {
+        try {
+            const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowerstatuses`)
+            if (resp.status === 200) {
+                setManpowerStatuses(await resp.json())
+            } else {
+                console.error('Status error')
+            }
+        } catch (e) {
+        console.error(e)
+        } 
+    }
+    const fetchManpowerStatusAmounts = async () => {
+        try {
+            const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowerstatusamounts`)
+            if (resp.status === 200) {
+                setManpowerStatusAmounts(await resp.json())
+            } else {
+                console.error('Status error')
+            }
+        } catch (e) {
+        console.error(e)
+        } 
+    }
+    return (
+        <div>
+            <div style={{ overflow: "auto", resize: "vertical", height: "65vh" }}>
+                <table border="1" style={{ width: "100%", borderCollapse: "separate" }}>
+                <thead>
+                    <tr style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                    <th style={{ position: "sticky", top: 0, zIndex: 1 }} rowSpan={2}>#</th>
+                    <th style={{ position: "sticky", top: 0 }} rowSpan={2}>Category 
+                        
+                    </th>
+                    <th colSpan={manpowerStatuses.length ?? 0}>Status 
+                      
+                    </th>
+                    <th style={{ position: "sticky", top: 0 }} rowSpan={2}>Total</th>
+                    </tr>
+                    <tr>
+                    {manpowerStatuses.length > 0 
+                        ? manpowerStatuses.map((manpowerStatus, i) => {
+                            return (
+                            <td style={{ position: "sticky", top: 0 }}>
+                                {manpowerStatus?.name ?? ''}
+                            </td>
+                            )
+                        })
+                        : <></>
+                    }
+                    </tr>
+                    {manpowerCategories.map((manpowerCategory, i) => {
+                    return (
+                        <tr>
+                        <td>{i + 1}</td>
+                        <td>
+                            {manpowerCategory?.name ?? ''}
+                        </td>
+                        {manpowerStatuses.map((manpowerStatus, i) => {
+                            const foundManpowerStatusAmount = manpowerStatusAmounts?.find(manpowerStatusAmount =>
+                            manpowerStatusAmount?.manpowerCategoryUuid === manpowerCategory?.uuid &&
+                            manpowerStatusAmount?.manpowerStatusUuid === manpowerStatus?.uuid
+                            )
+                            return (
+                            <td>
+                                {foundManpowerStatusAmount?.value ?? 0}
+                            </td>
+                            )
+                        })}
+                        <td>
+                            {manpowerStatusAmounts
+                            .filter(manpowerStatusAmount =>
+                                manpowerStatusAmount?.manpowerCategoryUuid === manpowerCategory?.uuid
+                            )
+                            .reduce((acc, manpowerStatusAmount) => acc + (manpowerStatusAmount?.value ?? 0), 0)
+                            }
+                        </td>
+                        </tr>
+                    )
+                    })}
+                    <tr>
+                        <th colSpan={2}>
+                            Total
+                        </th>
+                        {manpowerStatuses.map(manpowerStatus => {
+                            return (
+                                <th>
+                                    {manpowerStatusAmounts
+                                        .filter(manpowerStatusAmount => manpowerStatusAmount?.manpowerStatusUuid === manpowerStatus?.uuid )
+                                        .reduce((acc, manpowerStatusAmount) => acc + (manpowerStatusAmount?.value ?? 0), 0)
+                                    }
+                                </th>
+                            )
+                        })}
+                        <th>
+                            {manpowerStatusAmounts
+                                .reduce((acc, manpowerStatusAmount) => acc + (manpowerStatusAmount?.value ?? 0), 0)
+                            }
+                        </th>
+                        
+                    </tr>
+                </thead>
+                </table>
+            </div>
+        </div>
+    )
+}
+
+<Manpower />
+
+<!-- ![sdm](/img/05-sdm.png) -->
