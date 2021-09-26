@@ -170,7 +170,7 @@ export const AdminPage = () => {
             <h3>
               Settings 
               {loading
-                ? <></>
+                ? <>Loading... Please wait!</>
                 : <button onClick={handleSave}>Save</button>
               }
             </h3>
