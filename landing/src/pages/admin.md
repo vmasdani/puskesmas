@@ -132,6 +132,7 @@ export const AdminPage = () => {
           manpowerStatusAmounts: manpowerStatusAmounts
         })
       })
+      window.location.reload()
     } catch (e) {
       console.error(e)
     }
