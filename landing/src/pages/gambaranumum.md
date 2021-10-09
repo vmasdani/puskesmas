@@ -44,6 +44,8 @@ Jumlah dan Jenis tenaga di Puskesmas Pasir Nangka
 
 import { useState, useEffect } from 'react';
 
+
+
 export const Manpower = () => {
     const [manpowerCategories, setManpowerCategories] = useState([])
     const [manpowerStatuses, setManpowerStatuses] = useState([])

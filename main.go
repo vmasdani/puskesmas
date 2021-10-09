@@ -7,12 +7,14 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -72,7 +74,7 @@ func CheckEnv() {
 
 type GormModel struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
-	UUID      string     `gorm:"primary_key" json:"uuid"`
+	UUID      string     `json:"uuid"`
 	CreatedAt time.Time  `json:"createdAt"`
 	UpdatedAt time.Time  `json:"updatedAt"`
 	DeletedAt *time.Time `json:"deletedAt"`
@@ -82,6 +84,15 @@ type User struct {
 	GormModel
 	Name     string `json:"name"`
 	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type UserBody struct {
+	ID             uint   `json:"id"`
+	Name           string `json:"name"`
+	Username       string `json:"username"`
+	ChangePassword bool   `json:"changePassword"`
+	NewPassword    string `json:"newPassword"`
 }
 
 type UserRole struct {
@@ -415,30 +426,149 @@ func main() {
 		var loginData LoginStruct
 		json.NewDecoder(r.Body).Decode(&loginData)
 
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"exp":   time.Now().Unix() + 86400*365*30,
-			"admin": true,
-		})
-
-		// Sign and get the complete encoded token as a string using the secret
-		tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
-
-		fmt.Println(tokenString, err)
+		tokenString := ""
 
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if loginData.Username != os.Getenv("ADMIN_USERNAME") || loginData.Password != os.Getenv("ADMIN_PASSWORD") {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Username atau password salah!")
-			return
+		if loginData.Username != os.Getenv("ADMIN_USERNAME") {
+			var foundUser User
+
+			if db.Where("lower(username) = ?", strings.ToLower(loginData.Username)).First(&foundUser).Error != nil {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "Username tidak ditemukan!")
+				return
+			}
+
+			err := bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(loginData.Password))
+
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, "Password salah!")
+				return
+			}
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+				"exp":   time.Now().Unix() + 86400*365*30,
+				"admin": false,
+				"jti":   foundUser.ID,
+			})
+
+			// Sign and get the complete encoded token as a string using the secret
+			tokenString, err = token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+			fmt.Println(tokenString, err)
+		} else {
+			if loginData.Password != os.Getenv("ADMIN_PASSWORD") {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "Password salah!")
+				return
+			}
+
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+				"exp":   time.Now().Unix() + 86400*365*30,
+				"admin": true,
+				"jti":   0,
+			})
+
+			// Sign and get the complete encoded token as a string using the secret
+			var err error
+			tokenString, err = token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+
+			fmt.Println(tokenString, err)
+
 		}
 
 		fmt.Fprintf(w, "%s", tokenString)
 	}).Methods("POST")
+	r.HandleFunc("/users-view", func(w http.ResponseWriter, r *http.Request) {
 
+		w.Header().Set("content-type", "application/json")
+
+		var users []User
+		db.Find(&users)
+
+		usersMapped := []UserBody{}
+
+		for _, user := range users {
+			usersMapped = append(usersMapped, UserBody{
+				ID:             user.ID,
+				Name:           user.Name,
+				Username:       user.Username,
+				ChangePassword: false,
+				NewPassword:    "",
+			})
+		}
+
+		json.NewEncoder(w).Encode(usersMapped)
+	}).Methods("GET")
+
+	type UserSave struct {
+		UserBody      []UserBody `json:"userBody"`
+		UserDeleteIds []uint     `json:"userDeleteIds"`
+	}
+
+	r.HandleFunc("/users-save", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+
+		var userSave UserSave
+		json.NewDecoder(r.Body).Decode(&userSave)
+
+		fmt.Println(userSave.UserDeleteIds)
+
+		for _, user := range userSave.UserBody {
+			var foundUser User
+			if db.Where("username = ?", user.Username).Find(&foundUser).Error != nil {
+				newUser := User{
+					Username: user.Username,
+					Name:     user.Name,
+				}
+				newUser.ID = user.ID
+
+				if user.ChangePassword {
+					hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
+
+					if err != nil {
+						fmt.Println("Error gen password")
+					}
+
+					newUser.Password = string(hashedPassword)
+				}
+
+				db.Save(&newUser)
+
+			} else {
+				fmt.Println(user.Name, user.Username, foundUser.Username)
+
+				foundUser.ID = user.ID
+				foundUser.Name = user.Name
+				foundUser.Username = user.Username
+
+				if user.ChangePassword {
+					hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.NewPassword), bcrypt.DefaultCost)
+
+					if err != nil {
+						fmt.Println("Error gen password")
+					}
+
+					foundUser.Password = string(hashedPassword)
+				}
+
+				fmt.Println(foundUser)
+
+				db.Save(&foundUser)
+			}
+		}
+
+		for _, userDeleteId := range userSave.UserDeleteIds {
+			fmt.Println(userDeleteId)
+			db.Delete(&User{}, userDeleteId)
+		}
+
+		json.NewEncoder(w).Encode(userSave)
+	}).Methods("POST")
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./landing/")))
 
 	serverPort := os.Getenv("SERVER_PORT")
@@ -455,4 +585,5 @@ func main() {
 		// Enable Debugging for testing, consider disabling in production
 		Debug: true,
 	}).Handler(r)))
+
 }

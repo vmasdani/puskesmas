@@ -6,6 +6,8 @@ export const AdminPage = () => {
   const [authorized, setAuthorized] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [users, setUsers] = useState([])
+  const [userDeleteIds, setUserDeleteIds] = useState([])
   const [manpowerCategories, setManpowerCategories] = useState([])
   const [manpowerCategoryDeleteIds, setManpowerCategoryDeleteIds] = useState([])
   const [manpowerStatuses, setManpowerStatuses] = useState([])
@@ -65,6 +67,7 @@ export const AdminPage = () => {
           fetchManpowerCategories(),
           fetchManpowerStatuses(),
           fetchManpowerStatusAmounts(),
+          fetchUsersView(),
         ])
       } else {
         console.error('Status error')
@@ -89,6 +92,19 @@ export const AdminPage = () => {
       console.error(e)
     } 
   }
+  const fetchUsersView = async () => {
+    try {
+      const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/users-view`, {})
+      if (resp.status === 200) {
+        setUsers(await resp.json())
+      } else {
+        console.error('Status error')
+      }
+    } catch (e) {
+      console.error(e)
+    } 
+  }
+  
   const fetchManpowerStatuses = async () => {
     try {
       const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowerstatuses`, {
@@ -125,21 +141,31 @@ export const AdminPage = () => {
   const handleSave = async ()  => {
     try {
       setLoading(true)
-      const resp = await fetch(`${process.env.REACT_APP_BASE_URL}/manpowers-save`, {
-        method: 'post',
-        headers: {
-          'content-type': 'application/json',
-          'authorization': localStorage.getItem('apiKey')
-        },
-        body: JSON.stringify({
-          manpowerCategories: manpowerCategories,
-          manpowerCategoryDeleteIds: manpowerCategoryDeleteIds,
-          manpowerStatuses: manpowerStatuses,
-          manpowerStatusDeleteIds: manpowerStatusDeleteIds,
-          manpowerStatusAmounts: manpowerStatusAmounts,
-          manpowerStatusAmountDeleteIds: manpowerStatusAmountDeleteIds,
-        })
-      })
+      const resp = await Promise.all([
+        fetch(`${process.env.REACT_APP_BASE_URL}/manpowers-save`, {
+          method: 'post',
+          headers: {
+            'content-type': 'application/json',
+            'authorization': localStorage.getItem('apiKey')
+          },
+          body: JSON.stringify({
+            manpowerCategories: manpowerCategories,
+            manpowerCategoryDeleteIds: manpowerCategoryDeleteIds,
+            manpowerStatuses: manpowerStatuses,
+            manpowerStatusDeleteIds: manpowerStatusDeleteIds,
+            manpowerStatusAmounts: manpowerStatusAmounts,
+            manpowerStatusAmountDeleteIds: manpowerStatusAmountDeleteIds,
+          })
+        }),
+        fetch(`${process.env.REACT_APP_BASE_URL}/users-save`, {
+          method: 'post',
+          headers: {
+            'content-type': 'application/json',
+            'authorization': localStorage.getItem('apiKey')
+          },
+          body: JSON.stringify({userBody: users, userDeleteIds: userDeleteIds})
+        }),
+      ]) 
       window.location.reload()
     } catch (e) {
       setLoading(false)
@@ -175,7 +201,71 @@ export const AdminPage = () => {
               }
             </h3>
             <hr />
-            <h6>Manpower</h6>
+            <h6>Users</h6>
+            <div style={{display:"flex"}}>
+              <button onClick={() => {
+                setUsers([
+                  ...users,
+                  {
+                    username: ''
+                  }
+                ])
+                console.log(users)
+              }}>Add</button>
+            </div>
+            <div>
+              {users.map((user, i ) => {
+                return (
+                  <div style={{display:"flex",width:"100%", marginTop: 5, marginBottom: 5}}>
+                    <input 
+                      style={{ flexGrow: 1 }} 
+                      placeholder="Name..." 
+                      value={user?.name} 
+                      onChange={e => { 
+                        setUsers(users.map((userX, ix) => ix === i
+                          ? { ...userX, name: e.target.value }
+                          : userX
+                        )) 
+                      }} 
+                    />
+                    <input 
+                      style={{ flexGrow: 1 }} 
+                      placeholder="Username..." 
+                      value={user?.username} 
+                      onChange={e => { 
+                        setUsers(users.map((userX, ix) => ix === i
+                          ? { ...userX, username: e.target.value }
+                          : userX
+                        )) 
+                      }}
+                    />
+                    <button
+                      onClick={async () => {
+                        try {
+                          const newPassword = window.prompt('Enter new password:')
+                          if (newPassword && newPassword !== '') {
+                            console.log('new pass', newPassword)
+                            setUsers(users.map((userX, ix) => ix === i
+                              ? { ...userX, newPassword: newPassword, changePassword: true }
+                              : userX
+                            ))
+                          }
+                        } catch (e) {
+                          console.error(e)
+                        }
+                      }}
+                    >Change Password</button>
+                    <button onClick={() => {
+                      console.log(i)
+                      console.log(users.filter((_, ix) => i !== ix))
+                      setUsers(users.filter((_, ix) => i !== ix))
+                    }}>Delete</button>
+                  </div>
+                )
+              })}
+            </div>
+            <hr />
+            <h6>Manpower</h6> 
             <div style={{ overflow: "auto", resize: "vertical", height: "40vh" }}>
               <table border="1" style={{ width: "100%", borderCollapse: "separate" }}>
                   <tr style={{ position: "sticky", top: 0, zIndex: 1 }}>
