@@ -168,58 +168,63 @@ export const Sidumas = () => {
             }}
           >
             <div>
-              {complaints.reverse().map((complaint, i) => {
-                return (
-                  <div style={{ }}>
-                    <div 
-                      style={{
-                        display:"flex",
-                        width: "100%",
-                        justifyContent: "space-between",
-                        color: complaint?.answer === "" ? 'crimson' : 'green'
-                      }}
-                    >
-                      <strong>
-                        {(complaints?.length ?? 0) - i}) Pengirim: {complaint?.name}
-                      </strong>
-                      {authorized 
-                        ? <button 
-                            onClick={() => setComplaintToEdit(complaint)}
-                          >
-                            Edit
-                          </button>
-                        :<></>
-                      }
+              {(() => {
+                const complaintsReversed = [...complaints]
+                complaintsReversed.reverse()
+
+                return complaintsReversed.map((complaint, i) => {
+                  return (
+                    <div style={{ }}>
+                      <div 
+                        style={{
+                          display:"flex",
+                          width: "100%",
+                          justifyContent: "space-between",
+                          color: complaint?.answer === "" ? 'crimson' : 'green'
+                        }}
+                      >
+                        <strong>
+                          {(complaints?.length ?? 0) - i}) Pengirim: {complaint?.name}
+                        </strong>
+                        {authorized 
+                          ? <button 
+                              onClick={() => setComplaintToEdit(complaint)}
+                            >
+                              Edit
+                            </button>
+                          :<></>
+                        }
+                      </div>
+                      <div>Pengaduan:</div>
+                      <div>
+                        <textarea 
+                          readOnly 
+                          value={complaint?.complaint} 
+                          style={{ width: "100%", resize: "vertical", height: "10vh" }} 
+                        />
+                      </div>
+                      <div>Jawaban:</div>
+                      <div>
+                        <textarea 
+                          readOnly
+                          value={complaint?.answer}
+                          style={{ width: "100%", resize: "vertical", height: "10vh" }} 
+                        />
+                      </div>
+                      <div>
+                        Tanggal: {complaint?.createdAt 
+                          ? Intl.DateTimeFormat(navigator.language ?? 'en-US',  {
+                              dateStyle: "long",
+                              timeStyle: "long"
+                            }).format(new Date(complaint.createdAt)) 
+                          : 'No date' 
+                        }
+                      </div>
+                      <hr />
                     </div>
-                    <div>Pengaduan:</div>
-                    <div>
-                      <textarea 
-                        readOnly 
-                        value={complaint?.complaint} 
-                        style={{ width: "100%", resize: "vertical", height: "10vh" }} 
-                      />
-                    </div>
-                    <div>Jawaban:</div>
-                    <div>
-                      <textarea 
-                        readOnly
-                        value={complaint?.answer}
-                        style={{ width: "100%", resize: "vertical", height: "10vh" }} 
-                      />
-                    </div>
-                    <div>
-                      Tanggal: {complaint?.createdAt 
-                        ? Intl.DateTimeFormat(navigator.language ?? 'en-US',  {
-                            dateStyle: "long",
-                            timeStyle: "long"
-                          }).format(new Date(complaint.createdAt)) 
-                        : 'No date' 
-                      }
-                    </div>
-                    <hr />
-                  </div>
-                )
-              })}
+                  )
+                })
+              })()}
             </div>
           </div>
         </div>
