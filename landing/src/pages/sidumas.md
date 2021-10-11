@@ -171,7 +171,6 @@ export const Sidumas = () => {
               {(() => {
                 const complaintsReversed = [...complaints]
                 complaintsReversed.reverse()
-
                 return complaintsReversed.map((complaint, i) => {
                   return (
                     <div style={{ }}>
