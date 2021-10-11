@@ -166,6 +166,7 @@ export const AdminPage = () => {
   }
   const handleSaveUsers = async () => {
     try {
+      setLoading(true)
       await Promise.all([
         fetch(`${process.env.REACT_APP_BASE_URL}/users-save`, {
           method: 'post',
