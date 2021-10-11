@@ -52,7 +52,7 @@ print(env_result)
 print(landing_env_result)
 
 # Push admin env
-open('./admin/.env', 'w+').write(env_result)
+# open('./admin/.env', 'w+').write(env_result)
 
 # Push sidumas env
 open('./landing/.env', 'w+').write(landing_env_result)
@@ -71,8 +71,6 @@ elif run_type == 'prod':
         ('mkdir -p dist/admin && mkdir -p dist/landing && mkdir -p dist/assets && mkdir -p dist/news', '.'),
         ('npm run build', 'landing'),
         ('cp -r landing/build/* ./dist/landing', '.'),
-        ('npm run build', 'admin'),
-        ('cp -r admin/build/* ./dist/admin', '.'),
         ('xgo --targets=linux/amd64 .', '.'),
         ('sudo chmod -R 777 github.com', '.'),
         ('mv github.com/vmasdani/puskesmas-linux-amd64 dist', '.'),

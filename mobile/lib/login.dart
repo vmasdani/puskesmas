@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -88,6 +91,10 @@ class _LoginPageState extends State<LoginPage> {
 
                     final token = res.body;
                     state.setApiKey(token);
+                    (await SharedPreferences.getInstance())
+                        .setString('apiKey', token);
+
+                    initLogin(state, token);
                   } catch (e) {
                     print('[ERROR LOGIN] $e');
 

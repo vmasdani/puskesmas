@@ -3,3 +3,4 @@ puskesmas
 .env
 env.json
 github.com*
+service-account.json

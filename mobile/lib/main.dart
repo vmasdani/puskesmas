@@ -1,3 +1,4 @@
+import 'package:android/helpers.dart';
 import 'package:android/login.dart';
 import 'package:android/main_page.dart';
 import 'package:android/state.dart';
@@ -6,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
@@ -75,6 +77,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final token = await FirebaseMessaging.instance.getToken();
 
     state.setFcmToken(token);
+
+    final apiKey = (await SharedPreferences.getInstance()).getString('apiKey');
+
+    initLogin(state, apiKey);
 
     print(
       '[TOKEN] ${token}',

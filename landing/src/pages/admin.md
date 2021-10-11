@@ -138,7 +138,7 @@ export const AdminPage = () => {
     } 
   }
   
-  const handleSave = async ()  => {
+  const handleSaveManpower = async ()  => {
     try {
       setLoading(true)
       const resp = await Promise.all([
@@ -157,6 +157,16 @@ export const AdminPage = () => {
             manpowerStatusAmountDeleteIds: manpowerStatusAmountDeleteIds,
           })
         }),
+      ]) 
+      window.location.reload()
+    } catch (e) {
+      setLoading(false)
+      console.error(e)
+    }
+  }
+  const handleSaveUsers = async () => {
+    try {
+      await Promise.all([
         fetch(`${process.env.REACT_APP_BASE_URL}/users-save`, {
           method: 'post',
           headers: {
@@ -165,10 +175,9 @@ export const AdminPage = () => {
           },
           body: JSON.stringify({userBody: users, userDeleteIds: userDeleteIds})
         }),
-      ]) 
+      ])
       window.location.reload()
     } catch (e) {
-      setLoading(false)
       console.error(e)
     }
   }
@@ -195,13 +204,16 @@ export const AdminPage = () => {
         ? <div style={{ marginTop: 15 }}>
             <h3>
               Settings 
-              {loading
-                ? <>Loading... Please wait!</>
-                : <button onClick={handleSave}>Save</button>
-              }
             </h3>
             <hr />
-            <h6>Users</h6>
+            <div>
+              <h6>Users</h6>
+              {loading
+                ? <>Loading... Please wait!</>
+                : <button onClick={handleSaveUsers}>Save</button>
+              }
+            </div>
+            <hr />
             <div style={{display:"flex"}}>
               <button onClick={() => {
                 setUsers([
@@ -265,7 +277,14 @@ export const AdminPage = () => {
               })}
             </div>
             <hr />
-            <h6>Manpower</h6> 
+            <div>
+              <h6>Manpower</h6>
+              {loading
+                ? <>Loading... Please wait!</>
+                : <button onClick={handleSaveManpower}>Save</button>
+              }
+            </div>
+             
             <div style={{ overflow: "auto", resize: "vertical", height: "40vh" }}>
               <table border="1" style={{ width: "100%", borderCollapse: "separate" }}>
                   <tr style={{ position: "sticky", top: 0, zIndex: 1 }}>

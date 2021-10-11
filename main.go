@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,11 +11,14 @@ import (
 	"strings"
 	"time"
 
+	firebase "firebase.google.com/go"
+	"firebase.google.com/go/messaging"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/api/option"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -43,6 +47,7 @@ func CheckEnv() {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	adminUsername := os.Getenv("ADMIN_USERNAME")
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	serviceAccountFile := os.Getenv("SERVICE_ACCOUNT_FILE")
 
 	if serverPort == "" {
 		serverPort = "8000"
@@ -61,14 +66,15 @@ func CheckEnv() {
 	}
 
 	godotenv.Write(map[string]string{
-		"DB_HOST":        dbHost,
-		"DB_USERNAME":    dbUsername,
-		"DB_PASSWORD":    dbPassword,
-		"DB_NAME":        dbName,
-		"SERVER_PORT":    serverPort,
-		"JWT_SECRET":     jwtSecret,
-		"ADMIN_USERNAME": adminUsername,
-		"ADMIN_PASSWORD": adminPassword,
+		"DB_HOST":              dbHost,
+		"DB_USERNAME":          dbUsername,
+		"DB_PASSWORD":          dbPassword,
+		"DB_NAME":              dbName,
+		"SERVER_PORT":          serverPort,
+		"JWT_SECRET":           jwtSecret,
+		"ADMIN_USERNAME":       adminUsername,
+		"ADMIN_PASSWORD":       adminPassword,
+		"SERVICE_ACCOUNT_FILE": serviceAccountFile,
 	}, "./.env")
 }
 
@@ -85,6 +91,7 @@ type User struct {
 	Name     string `json:"name"`
 	Username string `json:"username"`
 	Password string `json:"password"`
+	FcmToken string `json:"fcmToken"`
 }
 
 type UserBody struct {
@@ -93,6 +100,16 @@ type UserBody struct {
 	Username       string `json:"username"`
 	ChangePassword bool   `json:"changePassword"`
 	NewPassword    string `json:"newPassword"`
+}
+
+func userToUserBody(user User) UserBody {
+	return UserBody{
+		ID:             user.ID,
+		Name:           user.Name,
+		Username:       user.Username,
+		ChangePassword: false,
+		NewPassword:    "",
+	}
 }
 
 type UserRole struct {
@@ -170,6 +187,13 @@ func main() {
 	dsn := dbUsername + ":" + dbPassword + "@tcp(" + dbHost + ":3306)/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
+	app, err := firebase.NewApp(context.Background(), nil, option.WithCredentialsFile("service-account.json"))
+	if err != nil {
+		log.Fatalf("error initializing app: %v\n", err)
+	}
+
+	fmt.Println(app)
+
 	tables :=
 		[]interface{}{
 			User{},
@@ -198,6 +222,59 @@ func main() {
 
 	r.Use(AuthMiddleware)
 
+	fcmSendMulti := func(tokens []string, title string, body string) {
+		// Obtain a messaging.Client from the App.
+		ctx := context.Background()
+		client, err := app.Messaging(ctx)
+		if err != nil {
+			log.Fatalf("error getting Messaging client: %v\n", err)
+		}
+
+		// See documentation on defining a message payload.
+		message := &messaging.MulticastMessage{
+			Notification: &messaging.Notification{
+				Title: title,
+				Body:  body,
+			},
+			Tokens: tokens,
+		}
+		br, err := client.SendMulticast(context.Background(), message)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		// See the BatchResponse reference documentation
+		// for the contents of response.
+		fmt.Printf("%d messages were sent successfully\n", br.SuccessCount)
+	}
+
+	r.HandleFunc("/fcm-test", func(w http.ResponseWriter, r *http.Request) {
+
+		// Obtain a messaging.Client from the App.
+		ctx := context.Background()
+		client, err := app.Messaging(ctx)
+		if err != nil {
+			log.Fatalf("error getting Messaging client: %v\n", err)
+		}
+
+		// See documentation on defining a message payload.
+		message := &messaging.Message{
+			Notification: &messaging.Notification{
+				Title: "Price drop",
+				Body:  "5% off all electronics",
+			},
+			Token: "eWvUQpXgQem462q6qtJljm:APA91bFH6eDlMqPzLWolT6HwO-4HueRbD-xxIYEE9WQeIc0af4vwdKD78qv4BEo1EJFQHOFp3behskz1opTces-dpMIo5-20iwAOHs8Kjkp8ldtDIoL2L5zaCyzSk8Q-ZnsYEV2wdzIY",
+		}
+		// Send a message to devices subscribed to the combination of topics
+		// specified by the provided condition.
+		response, err := client.Send(ctx, message)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// Response is a message ID string.
+		fmt.Println("Successfully sent message:", response)
+	})
+
 	r.HandleFunc("/complaints", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -216,6 +293,25 @@ func main() {
 
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(&complaint)
+
+			tokens := func() []string {
+				var users []User
+				db.Find(&users)
+
+				tokens := []string{}
+
+				for _, user := range users {
+					if user.FcmToken != "" {
+						tokens = append(tokens, user.FcmToken)
+					}
+				}
+
+				return tokens
+			}()
+
+			if len(tokens) > 0 {
+				fcmSendMulti(tokens, "Aduan Baru", complaint.Name+": "+complaint.Complaint)
+			}
 		default:
 			fmt.Println("[complaints] method irrelevant")
 		}
@@ -277,6 +373,7 @@ func main() {
 
 		json.NewEncoder(w).Encode(complaint)
 		w.WriteHeader(http.StatusCreated)
+
 	})
 
 	r.HandleFunc("/authorize", func(w http.ResponseWriter, r *http.Request) {
@@ -297,21 +394,92 @@ func main() {
 		}
 
 	})
-	r.HandleFunc("/complaints-save", func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("authorization")
-		fmt.Println("Auth token:", auth)
+	// r.HandleFunc("/complaints-save", func(w http.ResponseWriter, r *http.Request) {
+	// 	auth := r.Header.Get("authorization")
+	// 	fmt.Println("Auth token:", auth)
 
-		token, err := jwt.ParseWithClaims(auth, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+	// 	token, err := jwt.ParseWithClaims(auth, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+	// 		return []byte(os.Getenv("JWT_SECRET")), nil
+	// 	})
+
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 		fmt.Fprintf(w, "Error decoding token")
+	// 		w.WriteHeader(http.StatusUnauthorized)
+	// 	}
+
+	// 	fmt.Println(token.Claims)
+	// })
+
+	getTokenId := func(auth string) (float64, error) {
+		claims := jwt.MapClaims{}
+		_, err := jwt.ParseWithClaims(auth, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 
 		if err != nil {
-			fmt.Println(err)
-			fmt.Fprintf(w, "Error decoding token")
-			w.WriteHeader(http.StatusUnauthorized)
+			return 0, err
 		}
 
-		fmt.Println(token.Claims)
+		fmt.Println(claims["jti"])
+		// fmt.Println(claims["jti"].(string))
+		fmt.Println(claims["jti"].(float64))
+
+		claimsFloat, ok := claims["jti"].(float64)
+
+		if ok {
+			return claimsFloat, nil
+		}
+
+		return 0, err
+
+	}
+
+	type FcmTokenBody struct {
+		Token string `json:"token"`
+	}
+
+	r.HandleFunc("/save-fcm-token", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+		var fcmToken FcmTokenBody
+		json.NewDecoder(r.Body).Decode(&fcmToken)
+		fmt.Println("Auth token:", auth)
+
+		id, err := getTokenId(auth)
+
+		fmt.Println(err, id)
+
+		var user User
+		if db.Where("id = ?", id).First(&user).Error != nil {
+			fmt.Println("Error fetching user")
+			return
+		}
+
+		fmt.Println(user.Name)
+		user.FcmToken = fcmToken.Token
+
+		db.Save(&user)
+	})
+
+	r.HandleFunc("/users-jwt", func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("authorization")
+		var fcmToken FcmTokenBody
+		json.NewDecoder(r.Body).Decode(&fcmToken)
+		fmt.Println("Auth token:", auth)
+
+		id, err := getTokenId(auth)
+
+		fmt.Println(err, id)
+
+		var user User
+		if db.Where("id = ?", id).First(&user).Error != nil {
+			fmt.Println("Error fetching user")
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "User not found")
+			return
+		}
+
+		json.NewEncoder(w).Encode(userToUserBody(user))
 	})
 
 	type ManpowerData struct {
@@ -493,13 +661,7 @@ func main() {
 		usersMapped := []UserBody{}
 
 		for _, user := range users {
-			usersMapped = append(usersMapped, UserBody{
-				ID:             user.ID,
-				Name:           user.Name,
-				Username:       user.Username,
-				ChangePassword: false,
-				NewPassword:    "",
-			})
+			usersMapped = append(usersMapped, userToUserBody(user))
 		}
 
 		json.NewEncoder(w).Encode(usersMapped)
