@@ -146,6 +146,10 @@ export const Manpower = () => {
                             .filter(manpowerStatusAmount =>
                                 manpowerStatusAmount?.manpowerCategoryUuid === manpowerCategory?.uuid
                             )
+                            .map(m => {
+                              console.log(manpowerCategories.find(mc => mc.uuid === m?.manpowerCategoryUuid)?.name)
+                              return m;
+                            })
                             .reduce((acc, manpowerStatusAmount) => acc + (manpowerStatusAmount?.value ?? 0), 0)
                             }
                         </td>

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	firebase "firebase.google.com/go"
@@ -671,6 +672,39 @@ func main() {
 		UserBody      []UserBody `json:"userBody"`
 		UserDeleteIds []uint     `json:"userDeleteIds"`
 	}
+
+	r.HandleFunc("/duplicate-remove", func(w http.ResponseWriter, r *http.Request) {
+		var manpowerCategories []ManpowerCategory
+		db.Find(&manpowerCategories)
+
+		var wg sync.WaitGroup
+
+		for _, category := range manpowerCategories {
+			// fmt.Println(category)
+
+			wg.Add(1)
+
+			go func(category ManpowerCategory) {
+				defer wg.Done()
+
+				var foundManpowerAmounts []ManpowerStatusAmount
+				db.Where("manpower_category_uuid = ?", category.UUID).Find(&foundManpowerAmounts)
+
+				if len(foundManpowerAmounts) > 1 {
+					for i, manpowerStatusAmount := range foundManpowerAmounts {
+						if i > 0 {
+							fmt.Println(category.Name, manpowerStatusAmount.ID, manpowerStatusAmount.Value)
+							db.Delete(&ManpowerStatusAmount{}, manpowerStatusAmount.ID)
+						}
+					}
+				}
+
+			}(category)
+
+			wg.Wait()
+
+		}
+	})
 
 	r.HandleFunc("/users-save", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
