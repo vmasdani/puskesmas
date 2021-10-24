@@ -380,7 +380,6 @@ export const AdminPage = () => {
                                         manpowerStatusAmount?.manpowerCategoryUuid === manpowerCategory?.uuid && 
                                         manpowerStatusAmount?.manpowerStatusUuid === manpowerStatus?.uuid
                                       )
-                                  console.log('found:', foundManpowerStatusAmount)
                                   if (foundManpowerStatusAmount) {
                                     foundManpowerStatusAmount.value = isNaN(parseInt(e.target.value)) 
                                       ? foundManpowerStatusAmount?.value
@@ -390,14 +389,6 @@ export const AdminPage = () => {
                                       : parseInt(e.target.value))
                                     setManpowerStatusAmounts(newManpowerStatusAmounts)
                                   } else {
-                                    console.log({
-                                        manpowerCategoryUuid: manpowerCategory?.uuid,
-                                        manpowerStatusUuid: manpowerStatus?.uuid,
-                                        value: isNaN(parseInt(e.target.value)) 
-                                          ? foundManpowerStatusAmount?.value
-                                          : parseInt(e.target.value),
-                                      })
-                                    
                                     setManpowerStatusAmounts([...
                                       newManpowerStatusAmounts,
                                       {

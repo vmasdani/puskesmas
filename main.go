@@ -512,11 +512,14 @@ func main() {
 		var manpowerData ManpowerData
 		json.NewDecoder(r.Body).Decode(&manpowerData)
 
+		fmt.Println("\n\n[MANPOWER DELETE ID]\n\n:", manpowerData.ManpowerCategoryDeleteIds)
+
 		for _, manpowerCategory := range manpowerData.ManpowerCategories {
 			db.Save(&manpowerCategory)
 		}
 
 		for _, id := range manpowerData.ManpowerCategoryDeleteIds {
+			fmt.Println("\n\n[DELETE]]\n\n", id)
 			db.Delete(&ManpowerCategory{}, id)
 		}
 
@@ -676,6 +679,47 @@ func main() {
 	r.HandleFunc("/duplicate-remove", func(w http.ResponseWriter, r *http.Request) {
 		var manpowerCategories []ManpowerCategory
 		db.Find(&manpowerCategories)
+
+		newCategories := []ManpowerCategory{}
+
+		// Delete duplicate categories
+		for _, category := range manpowerCategories {
+			found := false
+
+			for _, newCategory := range newCategories {
+				if newCategory.Name == category.Name {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				newCategories = append(newCategories, category)
+			}
+		}
+
+		for _, category := range newCategories {
+			fmt.Println(category.Name)
+
+			var foundCategories []ManpowerCategory
+			db.Where("name = ?", category.Name).Find(&foundCategories)
+
+			var wg sync.WaitGroup
+
+			for _, foundCategory := range foundCategories {
+				wg.Add(1)
+
+				go func(foundCategory ManpowerCategory, mainCategory ManpowerCategory) {
+					defer wg.Done()
+
+					if foundCategory.ID != mainCategory.ID {
+						db.Delete(ManpowerCategory{}, foundCategory.ID)
+					}
+				}(foundCategory, category)
+			}
+
+			wg.Wait()
+		}
 
 		var wg sync.WaitGroup
 
